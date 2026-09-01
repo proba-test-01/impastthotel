@@ -1,0 +1,774 @@
+<!doctype html>
+<html lang="bg">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Гуми Хотел</title>
+<style>
+  :root{
+    --bg:#f4f6f8; --card:#ffffff; --text:#1f2933; --muted:#6b7280;
+    --accent:#2563eb; --accent-dark:#1d4ed8; --green:#16a34a; --green-bg:#dcfce7;
+    --red:#dc2626; --red-bg:#fee2e2; --orange:#d97706; --orange-bg:#fef3c7;
+    --border:#e5e7eb;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0; font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+    background:var(--bg); color:var(--text); font-size:15px;
+  }
+  header{
+    background:var(--card); border-bottom:1px solid var(--border);
+    padding:14px 20px; display:flex; align-items:center; justify-content:space-between;
+    flex-wrap:wrap; gap:10px;
+  }
+  header h1{font-size:18px; margin:0; color:var(--accent-dark);}
+  nav a{
+    color:var(--text); text-decoration:none; margin-left:14px; font-size:14px;
+    padding:6px 10px; border-radius:6px; cursor:pointer;
+  }
+  nav a:hover{background:var(--bg);}
+  nav a.active{font-weight:700; color:var(--accent);}
+  main{max-width:1000px; margin:20px auto; padding:0 16px 40px;}
+  .card{
+    background:var(--card); border:1px solid var(--border); border-radius:10px;
+    padding:20px; margin-bottom:18px;
+  }
+  .summary-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin-bottom:20px;}
+  .stat{background:var(--card); border:1px solid var(--border); border-radius:10px; padding:16px; text-align:center;}
+  .stat .num{font-size:26px; font-weight:700; color:var(--accent-dark);}
+  .stat .label{font-size:13px; color:var(--muted); margin-top:4px;}
+  .stat.warn .num{color:var(--orange);}
+  .stat.bad .num{color:var(--red);}
+  table{width:100%; border-collapse:collapse; font-size:14px;}
+  th,td{padding:9px 8px; border-bottom:1px solid var(--border); text-align:left; vertical-align:middle;}
+  th{color:var(--muted); font-weight:600; font-size:12px; text-transform:uppercase;}
+  .table-wrap{overflow-x:auto;}
+  .badge{display:inline-block; padding:3px 9px; border-radius:999px; font-size:12px; font-weight:600;}
+  .badge.paid{background:var(--green-bg); color:var(--green);}
+  .badge.unpaid{background:var(--red-bg); color:var(--red);}
+  .badge.soon{background:var(--orange-bg); color:var(--orange);}
+  .btn{
+    display:inline-block; background:var(--accent); color:#fff; border:none;
+    padding:9px 16px; border-radius:8px; font-size:14px; cursor:pointer; text-decoration:none;
+  }
+  .btn:hover{background:var(--accent-dark);}
+  .btn.secondary{background:#e5e7eb; color:var(--text);}
+  .btn.secondary:hover{background:#d1d5db;}
+  .btn.danger{background:var(--red);}
+  .btn.danger:hover{background:#b91c1c;}
+  .btn.small{padding:5px 10px; font-size:12px; margin:2px 2px 2px 0;}
+  .actions{white-space:nowrap;}
+  .filters{margin-bottom:14px;}
+  .filters a{
+    display:inline-block; padding:7px 14px; margin-right:6px; margin-bottom:6px;
+    border-radius:999px; background:var(--card); border:1px solid var(--border);
+    color:var(--text); text-decoration:none; font-size:13px; cursor:pointer;
+  }
+  .filters a.active{background:var(--accent); color:#fff; border-color:var(--accent);}
+  .form-grid{display:grid; grid-template-columns:1fr 1fr; gap:14px;}
+  .form-grid .full{grid-column:1/-1;}
+  label{display:block; font-size:13px; color:var(--muted); margin-bottom:5px; font-weight:600;}
+  input[type=text], input[type=tel], input[type=number], input[type=date], input[type=password], input[type=file]{
+    width:100%; padding:9px 10px; border:1px solid var(--border); border-radius:8px; font-size:14px; font-family:inherit;
+  }
+  .login-wrap{display:flex; align-items:center; justify-content:center; min-height:90vh;}
+  .login-box{background:var(--card); border:1px solid var(--border); border-radius:12px; padding:34px; width:300px; text-align:center;}
+  .login-box input{text-align:center; font-size:22px; letter-spacing:6px; margin-bottom:14px;}
+  .error{background:var(--red-bg); color:var(--red); padding:10px 14px; border-radius:8px; margin-bottom:14px; font-size:14px;}
+  .success{background:var(--green-bg); color:var(--green); padding:10px 14px; border-radius:8px; margin-bottom:14px; font-size:14px;}
+  .muted{color:var(--muted); font-size:13px;}
+  .top-row{display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:14px;}
+  .search-row{margin-bottom:14px;}
+  .search-row input{max-width:420px;}
+
+  /* --- Разписка / печат --- */
+  .receipt-overlay{
+    position:fixed; inset:0; background:rgba(15,23,42,0.55); z-index:1000;
+    display:none; align-items:flex-start; justify-content:center; overflow:auto; padding:30px 16px;
+  }
+  .receipt-overlay.visible{display:flex;}
+  .receipt-box{width:100%; max-width:480px;}
+  .receipt-controls{display:flex; gap:10px; justify-content:center; margin-bottom:14px;}
+  .receipt-controls .btn{font-size:14px; padding:10px 18px;}
+  .receipt-controls .btn.danger{background:var(--red);}
+  .receipt-paper{
+    background:#fff; border-radius:10px; padding:26px 24px; box-shadow:0 10px 30px rgba(0,0,0,0.25);
+  }
+  .receipt-company{font-size:19px; font-weight:800; color:var(--text); text-align:left;}
+  .receipt-sub{font-size:13px; color:var(--muted); margin-top:2px; text-align:left;}
+  .receipt-meta{display:flex; justify-content:space-between; font-size:13px; color:var(--muted); margin:14px 0;}
+  .receipt-table{width:100%; border-collapse:collapse; margin-top:6px;}
+  .receipt-table td{padding:7px 0; border-bottom:1px dashed var(--border); font-size:14px; vertical-align:top;}
+  .receipt-table td.receipt-label{color:var(--muted); width:45%;}
+  .receipt-table td.receipt-value{font-weight:600; text-align:right;}
+  .receipt-footer{margin-top:16px; font-size:11px; color:var(--muted); text-align:center;}
+  .receipt-warning{
+    margin-top:14px; padding:12px 14px; font-size:15px; font-weight:800;
+    color:var(--red); text-align:center; line-height:1.4;
+    border:2px solid var(--red); border-radius:8px; background:var(--red-bg);
+    -webkit-print-color-adjust:exact; print-color-adjust:exact;
+  }
+  @media print{
+    @page{ size:A4; margin:9mm; }
+    body *{visibility:hidden;}
+    #receiptOverlay, #receiptOverlay *{visibility:visible;}
+    #receiptOverlay{position:absolute; inset:auto; top:0; left:0; width:100%; background:#fff; padding:0; display:block;}
+    #receiptOverlay .no-print{display:none !important;}
+    .receipt-box{max-width:100%;}
+    .receipt-paper{box-shadow:none; border-radius:0; padding:0;}
+    /* по-едър, лесен за четене шрифт при печат - но разписката пак се събира на половин А4 лист */
+    .receipt-company{font-size:54px; line-height:1.1;}
+    .receipt-sub{font-size:30px; margin-top:0;}
+    .receipt-meta{font-size:30px; margin:5px 0;}
+    .receipt-table td{font-size:36px; padding:1px 0; line-height:1.1;}
+    .receipt-footer{font-size:26px; margin-top:4px;}
+    .receipt-warning{
+      background:#000 !important; color:#fff !important; border-color:#000 !important;
+      font-size:54px !important; padding:6px 16px; margin-top:4px; line-height:1.1;
+    }
+  }
+  .view{display:none;}
+  .view.visible{display:block;}
+  hr.sep{border:none; border-top:1px solid var(--border); margin:22px 0;}
+  @media (max-width:600px){
+    .form-grid{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+
+<header id="appHeader" style="display:none;">
+  <h1>🛞 Гуми Хотел</h1>
+  <nav>
+    <a data-view="dashboard">Табло</a>
+    <a data-view="add">Добави гуми</a>
+    <a data-view="history">История</a>
+    <a data-view="settings">Настройки</a>
+    <a id="logoutLink">Изход</a>
+  </nav>
+</header>
+
+<main>
+
+  <!-- LOGIN -->
+  <section id="view-login" class="view">
+    <div class="login-wrap">
+      <div class="login-box">
+        <h2>Вход</h2>
+        <p class="muted">Въведете ПИН код</p>
+        <div id="loginError"></div>
+        <form id="loginForm">
+          <input type="password" id="pinInput" inputmode="numeric" maxlength="12" autofocus>
+          <button class="btn" type="submit" style="width:100%;">Вход</button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- DASHBOARD -->
+  <section id="view-dashboard" class="view">
+    <div class="summary-grid" id="statsGrid"></div>
+    <div class="search-row">
+      <input type="text" id="searchInput" placeholder="Търсене по телефон, номер на кола, име или фамилия...">
+    </div>
+    <div class="top-row">
+      <div class="filters" id="filterBar"></div>
+      <a class="btn" data-view="add">+ Добави гуми</a>
+    </div>
+    <div class="card">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Кола №</th><th>Брой гуми</th><th>Клиент</th><th>Начало</th><th>Край</th><th>Статус</th><th>Действия</th></tr>
+          </thead>
+          <tbody id="dashboardRows"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ADD / EDIT -->
+  <section id="view-add" class="view">
+    <div class="card" style="max-width:640px;">
+      <h2 id="formHeading">Нови гуми</h2>
+      <div id="formError"></div>
+      <form id="tireForm">
+        <input type="hidden" id="editId">
+        <div class="form-grid">
+          <div>
+            <label>Номер на колата</label>
+            <input type="text" id="f_plate" required>
+          </div>
+          <div>
+            <label>Брой оставени гуми</label>
+            <input type="number" id="f_tireCount" min="1" required value="4">
+          </div>
+          <div>
+            <label>Име</label>
+            <input type="text" id="f_firstName" required>
+          </div>
+          <div>
+            <label>Фамилия</label>
+            <input type="text" id="f_lastName" required>
+          </div>
+          <div class="full">
+            <label>Телефон за контакт</label>
+            <input type="tel" id="f_phone" required>
+          </div>
+          <div>
+            <label>Начална дата на престой</label>
+            <input type="date" id="f_startDate" required>
+          </div>
+          <div>
+            <label>Крайна дата на престой</label>
+            <input type="date" id="f_endDate" required>
+          </div>
+          <div class="full">
+            <label>Забележка (незадължително)</label>
+            <input type="text" id="f_notes">
+          </div>
+        </div>
+        <div style="margin-top:18px;">
+          <button class="btn" type="submit">Запази</button>
+          <a class="btn secondary" data-view="dashboard">Отказ</a>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <!-- HISTORY -->
+  <section id="view-history" class="view">
+    <div class="card">
+      <h2>История (прибрани гуми)</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Кола №</th><th>Брой гуми</th><th>Клиент</th><th>Начало</th><th>Край</th><th>Статус</th><th>Действия</th></tr>
+          </thead>
+          <tbody id="historyRows"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- SETTINGS -->
+  <section id="view-settings" class="view">
+    <div class="card" style="max-width:420px;">
+      <h2>Смяна на ПИН код</h2>
+      <div id="settingsMsg"></div>
+      <form id="pinForm">
+        <label>Текущ ПИН код</label>
+        <input type="password" id="s_currentPin" maxlength="12" required>
+        <br><br>
+        <label>Нов ПИН код</label>
+        <input type="password" id="s_newPin" maxlength="12" required>
+        <br><br>
+        <label>Повтори новия ПИН код</label>
+        <input type="password" id="s_newPin2" maxlength="12" required>
+        <br><br>
+        <button class="btn" type="submit">Смени ПИН кода</button>
+      </form>
+    </div>
+
+    <div class="card" style="max-width:420px;">
+      <h2>Резервно копие</h2>
+      <p class="muted">Данните се пазят само в този браузър на този компютър. Препоръчваме периодично да свалите резервно копие.</p>
+      <button class="btn secondary" id="exportBtn">Свали резервно копие</button>
+      <hr class="sep">
+      <label>Възстановяване от резервно копие</label>
+      <input type="file" id="importFile" accept="application/json">
+      <p class="muted" style="margin-top:8px;">Внимание: възстановяването ще замени всички текущи записи с тези от файла.</p>
+    </div>
+  </section>
+
+</main>
+
+<div class="receipt-overlay" id="receiptOverlay">
+  <div class="receipt-box">
+    <div class="receipt-controls no-print">
+      <button class="btn" id="receiptPrintBtn">🖶 Печат</button>
+      <button class="btn danger" id="receiptCloseBtn">✕ Затвори</button>
+    </div>
+    <div class="receipt-paper" id="receiptContent"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var LS_TIRES = "gumihotel_tires";
+  var LS_PIN = "gumihotel_pin";
+  var LS_NEXTID = "gumihotel_nextid";
+  var SS_AUTH = "gumihotel_authed";
+
+  // ---------- storage helpers ----------
+  function loadTires(){
+    try {
+      var raw = localStorage.getItem(LS_TIRES);
+      return raw ? JSON.parse(raw) : [];
+    } catch(e){ return []; }
+  }
+  function saveTires(list){
+    localStorage.setItem(LS_TIRES, JSON.stringify(list));
+  }
+  function loadPin(){
+    return localStorage.getItem(LS_PIN) || "0000";
+  }
+  function savePin(pin){
+    localStorage.setItem(LS_PIN, pin);
+  }
+  function nextId(){
+    var n = parseInt(localStorage.getItem(LS_NEXTID) || "1", 10);
+    localStorage.setItem(LS_NEXTID, String(n+1));
+    return n;
+  }
+
+  function isAuthed(){
+    return sessionStorage.getItem(SS_AUTH) === "1";
+  }
+  function setAuthed(v){
+    if (v) sessionStorage.setItem(SS_AUTH, "1");
+    else sessionStorage.removeItem(SS_AUTH);
+  }
+
+  // ---------- date helpers ----------
+  function todayStr(){
+    var d = new Date();
+    return d.getFullYear() + "-" + pad(d.getMonth()+1) + "-" + pad(d.getDate());
+  }
+  function pad(n){ return n < 10 ? "0"+n : ""+n; }
+  function parseYMD(s){
+    var parts = s.split("-").map(Number);
+    return { y: parts[0], m: parts[1], d: parts[2] };
+  }
+  function cmpDates(a, b){
+    // ISO YYYY-MM-DD strings compare correctly lexicographically
+    return a < b ? -1 : (a > b ? 1 : 0);
+  }
+  function esc(v){
+    var s = (v === undefined || v === null) ? "" : String(v);
+    return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+  }
+  function formatDateBG(s){
+    if (!s) return "";
+    var p = parseYMD(s);
+    return pad(p.d) + "." + pad(p.m) + "." + p.y;
+  }
+
+  // ---------- view routing ----------
+  var views = ["login","dashboard","add","history","settings"];
+  function showView(name){
+    if (!isAuthed() && name !== "login") name = "login";
+    views.forEach(function(v){
+      document.getElementById("view-"+v).classList.toggle("visible", v === name);
+    });
+    document.getElementById("appHeader").style.display = isAuthed() ? "flex" : "none";
+    document.querySelectorAll("nav a[data-view]").forEach(function(a){
+      a.classList.toggle("active", a.getAttribute("data-view") === name);
+    });
+    if (name === "dashboard") renderDashboard();
+    if (name === "history") renderHistory();
+    if (name === "add" && !document.getElementById("editId").value){
+      resetForm();
+    }
+    if (name === "login"){
+      document.getElementById("pinInput").value = "";
+      document.getElementById("loginError").innerHTML = "";
+      document.getElementById("pinInput").focus();
+    }
+    window.scrollTo(0,0);
+  }
+
+  document.addEventListener("click", function(e){
+    var el = e.target.closest("[data-view]");
+    if (el){
+      e.preventDefault();
+      showView(el.getAttribute("data-view"));
+    }
+  });
+
+  // ---------- login ----------
+  document.getElementById("loginForm").addEventListener("submit", function(e){
+    e.preventDefault();
+    var val = document.getElementById("pinInput").value;
+    if (val === loadPin()){
+      setAuthed(true);
+      showView("dashboard");
+    } else {
+      document.getElementById("loginError").innerHTML = '<div class="error">Грешен ПИН код. Опитайте отново.</div>';
+      document.getElementById("pinInput").value = "";
+      document.getElementById("pinInput").focus();
+    }
+  });
+
+  document.getElementById("logoutLink").addEventListener("click", function(){
+    setAuthed(false);
+    showView("login");
+  });
+
+  // ---------- dashboard ----------
+  var currentFilter = "active";
+  var currentSearch = "";
+
+  function matchesSearch(r, term){
+    if (!term) return true;
+    var t = term.toLowerCase();
+    var plate = (r.plate||"").toLowerCase();
+    var phone = (r.phone||"").toLowerCase();
+    var name = ((r.firstName||"")+" "+(r.lastName||"")).toLowerCase();
+    return plate.indexOf(t) >= 0 || phone.indexOf(t) >= 0 || name.indexOf(t) >= 0;
+  }
+
+  function statusInfo(r){
+    if (r.paid) return { badge: '<span class="badge paid">Платено</span>', due: false };
+    var today = todayStr();
+    if (cmpDates(r.endDate, today) < 0){
+      return { badge: '<span class="badge unpaid">Просрочено</span>', due: true };
+    }
+    var t = parseYMD(today), e = parseYMD(r.endDate);
+    if (t.y === e.y && t.m === e.m){
+      return { badge: '<span class="badge soon">Изтича този месец</span>', due: true };
+    }
+    return { badge: '<span class="badge unpaid">Неплатено</span>', due: false };
+  }
+
+  function renderDashboard(){
+    var all = loadTires().filter(function(r){ return r.status === "active"; });
+    all.sort(function(a,b){ return cmpDates(a.endDate, b.endDate); });
+
+    var totalRecords = all.length;
+    var totalTires = all.reduce(function(s,r){ return s + Number(r.tireCount||0); }, 0);
+    var unpaidCount = all.filter(function(r){ return !r.paid; }).length;
+    var dueCount = all.filter(function(r){ return !r.paid && statusInfo(r).due; }).length;
+
+    document.getElementById("statsGrid").innerHTML =
+      stat(totalRecords, "Активни клиенти", "") +
+      stat(totalTires, "Гуми в хотела", "") +
+      stat(unpaidCount, "Неплатени", unpaidCount ? "warn" : "") +
+      stat(dueCount, "Изтичащи / просрочени", dueCount ? "bad" : "");
+
+    var filters = [
+      ["active","Всички ("+totalRecords+")"],
+      ["unpaid","Неплатени ("+unpaidCount+")"],
+      ["paid","Платени ("+(totalRecords-unpaidCount)+")"],
+      ["due","Изтичащи / просрочени ("+dueCount+")"]
+    ];
+    document.getElementById("filterBar").innerHTML = filters.map(function(f){
+      return '<a class="'+(currentFilter===f[0]?"active":"")+'" data-filter="'+f[0]+'">'+f[1]+'</a>';
+    }).join("");
+
+    var shown = all;
+    if (currentFilter === "unpaid") shown = all.filter(function(r){ return !r.paid; });
+    else if (currentFilter === "paid") shown = all.filter(function(r){ return !!r.paid; });
+    else if (currentFilter === "due") shown = all.filter(function(r){ return !r.paid && statusInfo(r).due; });
+
+    shown = shown.filter(function(r){ return matchesSearch(r, currentSearch); });
+
+    var rowsHtml = shown.map(function(r){
+      var info = statusInfo(r);
+      var toggleLabel = r.paid ? "Маркирай неплатено" : "Маркирай платено";
+      return '<tr>' +
+        '<td><strong>'+esc(r.plate)+'</strong></td>' +
+        '<td>'+esc(r.tireCount)+'</td>' +
+        '<td>'+esc(r.firstName+" "+r.lastName)+'<br><span class="muted">'+esc(r.phone)+'</span></td>' +
+        '<td>'+esc(r.startDate)+'</td>' +
+        '<td>'+esc(r.endDate)+'</td>' +
+        '<td>'+info.badge+'</td>' +
+        '<td class="actions">' +
+          '<button class="btn small secondary" data-action="togglePaid" data-id="'+r.id+'">'+toggleLabel+'</button>' +
+          '<button class="btn small secondary" data-action="edit" data-id="'+r.id+'">Редакция</button>' +
+          '<button class="btn small secondary" data-action="print" data-id="'+r.id+'">🖶 Печат</button>' +
+          '<button class="btn small" data-action="collect" data-id="'+r.id+'">Прибрани</button>' +
+          '<button class="btn small danger" data-action="delete" data-id="'+r.id+'">Изтрий</button>' +
+        '</td>' +
+      '</tr>';
+    }).join("");
+
+    document.getElementById("dashboardRows").innerHTML = rowsHtml ||
+      '<tr><td colspan="7" class="muted" style="text-align:center;padding:30px;">Няма записи в тази категория.</td></tr>';
+  }
+
+  function stat(num, label, cls){
+    return '<div class="stat '+cls+'"><div class="num">'+num+'</div><div class="label">'+label+'</div></div>';
+  }
+
+  document.getElementById("filterBar").addEventListener("click", function(e){
+    var el = e.target.closest("[data-filter]");
+    if (el){ currentFilter = el.getAttribute("data-filter"); renderDashboard(); }
+  });
+
+  document.getElementById("searchInput").addEventListener("input", function(e){
+    currentSearch = e.target.value.trim();
+    renderDashboard();
+  });
+
+  document.getElementById("dashboardRows").addEventListener("click", handleRowAction);
+  document.getElementById("historyRows").addEventListener("click", handleRowAction);
+
+  function handleRowAction(e){
+    var el = e.target.closest("[data-action]");
+    if (!el) return;
+    var id = Number(el.getAttribute("data-id"));
+    var action = el.getAttribute("data-action");
+    var list = loadTires();
+    var idx = list.findIndex(function(r){ return r.id === id; });
+    if (idx === -1) return;
+
+    if (action === "togglePaid"){
+      list[idx].paid = !list[idx].paid;
+      saveTires(list);
+      renderDashboard();
+    } else if (action === "edit"){
+      loadRecordIntoForm(list[idx]);
+      showView("add");
+    } else if (action === "print"){
+      openReceipt(list[idx], true);
+    } else if (action === "collect"){
+      list[idx].status = "done";
+      saveTires(list);
+      renderDashboard();
+    } else if (action === "restore"){
+      list[idx].status = "active";
+      saveTires(list);
+      renderHistory();
+    } else if (action === "delete"){
+      if (confirm("Сигурни ли сте, че искате да изтриете този запис?")){
+        list.splice(idx,1);
+        saveTires(list);
+        renderDashboard();
+        renderHistory();
+      }
+    }
+  }
+
+  // ---------- add / edit form ----------
+  function resetForm(){
+    document.getElementById("formHeading").textContent = "Нови гуми";
+    document.getElementById("formError").innerHTML = "";
+    document.getElementById("editId").value = "";
+    document.getElementById("f_plate").value = "";
+    document.getElementById("f_tireCount").value = "4";
+    document.getElementById("f_firstName").value = "";
+    document.getElementById("f_lastName").value = "";
+    document.getElementById("f_phone").value = "";
+    document.getElementById("f_startDate").value = todayStr();
+    document.getElementById("f_endDate").value = "";
+    document.getElementById("f_notes").value = "";
+  }
+
+  function loadRecordIntoForm(r){
+    document.getElementById("formHeading").textContent = "Редакция на запис";
+    document.getElementById("formError").innerHTML = "";
+    document.getElementById("editId").value = r.id;
+    document.getElementById("f_plate").value = r.plate;
+    document.getElementById("f_tireCount").value = r.tireCount;
+    document.getElementById("f_firstName").value = r.firstName;
+    document.getElementById("f_lastName").value = r.lastName;
+    document.getElementById("f_phone").value = r.phone;
+    document.getElementById("f_startDate").value = r.startDate;
+    document.getElementById("f_endDate").value = r.endDate;
+    document.getElementById("f_notes").value = r.notes || "";
+  }
+
+  document.getElementById("tireForm").addEventListener("submit", function(e){
+    e.preventDefault();
+    var plate = document.getElementById("f_plate").value.trim();
+    var tireCount = document.getElementById("f_tireCount").value;
+    var firstName = document.getElementById("f_firstName").value.trim();
+    var lastName = document.getElementById("f_lastName").value.trim();
+    var phone = document.getElementById("f_phone").value.trim();
+    var startDate = document.getElementById("f_startDate").value;
+    var endDate = document.getElementById("f_endDate").value;
+    var notes = document.getElementById("f_notes").value.trim();
+
+    if (!plate || !tireCount || !firstName || !lastName || !phone || !startDate || !endDate){
+      document.getElementById("formError").innerHTML = '<div class="error">Моля, попълнете всички задължителни полета.</div>';
+      return;
+    }
+
+    var editId = document.getElementById("editId").value;
+    var list = loadTires();
+    var newRecord = null;
+
+    if (editId){
+      var idx = list.findIndex(function(r){ return r.id === Number(editId); });
+      if (idx !== -1){
+        list[idx].plate = plate;
+        list[idx].tireCount = Number(tireCount);
+        list[idx].firstName = firstName;
+        list[idx].lastName = lastName;
+        list[idx].phone = phone;
+        list[idx].startDate = startDate;
+        list[idx].endDate = endDate;
+        list[idx].notes = notes;
+      }
+    } else {
+      newRecord = {
+        id: nextId(),
+        plate: plate,
+        tireCount: Number(tireCount),
+        firstName: firstName,
+        lastName: lastName,
+        phone: phone,
+        startDate: startDate,
+        endDate: endDate,
+        paid: false,
+        status: "active",
+        notes: notes,
+        createdAt: new Date().toISOString()
+      };
+      list.push(newRecord);
+    }
+    saveTires(list);
+    showView("dashboard");
+    if (newRecord){
+      openReceipt(newRecord, true);
+    }
+  });
+
+  // ---------- разписка / печат ----------
+  var receiptOverlay = document.getElementById("receiptOverlay");
+  var receiptContent = document.getElementById("receiptContent");
+
+  function receiptRow(label, value){
+    return '<tr><td class="receipt-label">'+label+'</td><td class="receipt-value">'+value+'</td></tr>';
+  }
+
+  function buildReceiptHtml(r){
+    var paidLabel = r.paid ? "Платено" : "Неплатено";
+    var html = '' +
+      '<div class="receipt-company">Център за гуми Импас ТТ</div>' +
+      '<div class="receipt-sub">Разписка за приети гуми на съхранение</div>' +
+      '<div class="receipt-meta">' +
+        '<span>Разписка №: <strong>'+esc(r.id)+'</strong></span>' +
+        '<span>Дата: <strong>'+formatDateBG(todayStr())+'</strong></span>' +
+      '</div>' +
+      '<table class="receipt-table">' +
+        receiptRow("Клиент", esc(r.firstName+" "+r.lastName)) +
+        receiptRow("Телефон", esc(r.phone)) +
+        receiptRow("Номер на кола", esc(r.plate)) +
+        receiptRow("Брой гуми", esc(r.tireCount)) +
+        receiptRow("Начало на престой", formatDateBG(r.startDate)) +
+        receiptRow("Край на престой", formatDateBG(r.endDate)) +
+        receiptRow("Статус на плащане", paidLabel);
+    if (r.notes){
+      html += receiptRow("Забележка", esc(r.notes));
+    }
+    html += '</table>' +
+      '<div class="receipt-footer">Пазете тази разписка до вземането на гумите.</div>' +
+      '<div class="receipt-warning">Непотърсени и неплатени гуми 1 година след началото на престоя ще бъдат изхвърлени. Импас ТТ не носи отговорност.</div>';
+    return html;
+  }
+
+  function openReceipt(record, autoprint){
+    receiptContent.innerHTML = buildReceiptHtml(record);
+    receiptOverlay.classList.add("visible");
+    if (autoprint){
+      setTimeout(function(){ window.print(); }, 250);
+    }
+  }
+  function closeReceipt(){
+    receiptOverlay.classList.remove("visible");
+  }
+
+  document.getElementById("receiptPrintBtn").addEventListener("click", function(){ window.print(); });
+  document.getElementById("receiptCloseBtn").addEventListener("click", closeReceipt);
+  window.addEventListener("afterprint", function(){ /* keep overlay open so user can print again or close manually */ });
+
+  // ---------- history ----------
+  function renderHistory(){
+    var all = loadTires().filter(function(r){ return r.status === "done"; });
+    all.sort(function(a,b){ return cmpDates(b.endDate, a.endDate); });
+    var rowsHtml = all.map(function(r){
+      var badge = r.paid ? '<span class="badge paid">Платено</span>' : '<span class="badge unpaid">Неплатено</span>';
+      return '<tr>' +
+        '<td><strong>'+esc(r.plate)+'</strong></td>' +
+        '<td>'+esc(r.tireCount)+'</td>' +
+        '<td>'+esc(r.firstName+" "+r.lastName)+'<br><span class="muted">'+esc(r.phone)+'</span></td>' +
+        '<td>'+esc(r.startDate)+'</td>' +
+        '<td>'+esc(r.endDate)+'</td>' +
+        '<td>'+badge+'</td>' +
+        '<td class="actions">' +
+          '<button class="btn small secondary" data-action="restore" data-id="'+r.id+'">Върни активен</button>' +
+          '<button class="btn small secondary" data-action="print" data-id="'+r.id+'">🖶 Печат</button>' +
+          '<button class="btn small danger" data-action="delete" data-id="'+r.id+'">Изтрий</button>' +
+        '</td>' +
+      '</tr>';
+    }).join("");
+    document.getElementById("historyRows").innerHTML = rowsHtml ||
+      '<tr><td colspan="7" class="muted" style="text-align:center;padding:30px;">Няма прибрани гуми в историята.</td></tr>';
+  }
+
+  // ---------- settings: pin change ----------
+  document.getElementById("pinForm").addEventListener("submit", function(e){
+    e.preventDefault();
+    var cur = document.getElementById("s_currentPin").value;
+    var np = document.getElementById("s_newPin").value;
+    var np2 = document.getElementById("s_newPin2").value;
+    var msgEl = document.getElementById("settingsMsg");
+    if (cur !== loadPin()){
+      msgEl.innerHTML = '<div class="error">Текущият ПИН код е грешен.</div>';
+      return;
+    }
+    if (!np || np !== np2){
+      msgEl.innerHTML = '<div class="error">Новите ПИН кодове не съвпадат.</div>';
+      return;
+    }
+    savePin(np);
+    msgEl.innerHTML = '<div class="success">ПИН кодът е сменен успешно.</div>';
+    document.getElementById("pinForm").reset();
+  });
+
+  // ---------- settings: backup export / import ----------
+  document.getElementById("exportBtn").addEventListener("click", function(){
+    var data = {
+      exportedAt: new Date().toISOString(),
+      tires: loadTires()
+    };
+    var blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = "gumi-hotel-backup-" + todayStr() + ".json";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+
+  document.getElementById("importFile").addEventListener("change", function(e){
+    var file = e.target.files[0];
+    if (!file) return;
+    var msgEl = document.getElementById("settingsMsg");
+    var reader = new FileReader();
+    reader.onload = function(evt){
+      try {
+        var data = JSON.parse(evt.target.result);
+        var tires = Array.isArray(data) ? data : data.tires;
+        if (!Array.isArray(tires)) throw new Error("bad format");
+        if (!confirm("Това ще замени всички текущи записи с "+tires.length+" записа от файла. Продължавате ли?")) {
+          e.target.value = "";
+          return;
+        }
+        saveTires(tires);
+        var maxId = tires.reduce(function(m,r){ return Math.max(m, r.id||0); }, 0);
+        localStorage.setItem(LS_NEXTID, String(maxId+1));
+        msgEl.innerHTML = '<div class="success">Възстановени '+tires.length+' записа успешно.</div>';
+        renderDashboard();
+        renderHistory();
+      } catch(err){
+        msgEl.innerHTML = '<div class="error">Файлът не е валидно резервно копие.</div>';
+      }
+      e.target.value = "";
+    };
+    reader.readAsText(file);
+  });
+
+  // ---------- init ----------
+  showView(isAuthed() ? "dashboard" : "login");
+})();
+</script>
+</body>
+</html>
