@@ -294,10 +294,19 @@
 <div class="receipt-overlay" id="receiptOverlay">
   <div class="receipt-box">
     <div class="receipt-controls no-print">
-      <button class="btn" id="receiptPrintBtn">Печат</button>
+      <button class="btn" id="receiptPrintBtn">🖶 Печат</button>
       <button class="btn danger" id="receiptCloseBtn">✕ Затвори</button>
     </div>
     <div class="receipt-paper" id="receiptContent"></div>
+  </div>
+</div>
+
+<div class="receipt-overlay" id="infoOverlay">
+  <div class="receipt-box">
+    <div class="receipt-controls no-print">
+      <button class="btn danger" id="infoCloseBtn">✕ Затвори</button>
+    </div>
+    <div class="receipt-paper" id="infoContent"></div>
   </div>
 </div>
 
@@ -362,6 +371,12 @@
     if (!s) return "";
     var p = parseYMD(s);
     return pad(p.d) + "." + pad(p.m) + "." + p.y;
+  }
+  function formatDateTimeBG(isoString){
+    if (!isoString) return "";
+    var d = new Date(isoString);
+    if (isNaN(d.getTime())) return "";
+    return pad(d.getDate()) + "." + pad(d.getMonth()+1) + "." + d.getFullYear() + " " + pad(d.getHours()) + ":" + pad(d.getMinutes());
   }
 
   // ---------- view routing ----------
@@ -486,7 +501,7 @@
         '<td class="actions">' +
           '<button class="btn small secondary" data-action="togglePaid" data-id="'+r.id+'">'+toggleLabel+'</button>' +
           '<button class="btn small secondary" data-action="edit" data-id="'+r.id+'">Редакция</button>' +
-          '<button class="btn small secondary" data-action="print" data-id="'+r.id+'">Печат</button>' +
+          '<button class="btn small secondary" data-action="print" data-id="'+r.id+'">🖶 Печат</button>' +
           '<button class="btn small" data-action="collect" data-id="'+r.id+'">Прибрани</button>' +
           '<button class="btn small danger" data-action="delete" data-id="'+r.id+'">Изтрий</button>' +
         '</td>' +
@@ -532,12 +547,16 @@
       showView("add");
     } else if (action === "print"){
       openReceipt(list[idx], true);
+    } else if (action === "info"){
+      openInfo(list[idx]);
     } else if (action === "collect"){
       list[idx].status = "done";
+      list[idx].collectedAt = new Date().toISOString();
       saveTires(list);
       renderDashboard();
     } else if (action === "restore"){
       list[idx].status = "active";
+      list[idx].collectedAt = null;
       saveTires(list);
       renderHistory();
     } else if (action === "delete"){
@@ -688,6 +707,42 @@
   document.getElementById("receiptCloseBtn").addEventListener("click", closeReceipt);
   window.addEventListener("afterprint", function(){ /* keep overlay open so user can print again or close manually */ });
 
+  // ---------- инфо (подробности за прибрана история) ----------
+  var infoOverlay = document.getElementById("infoOverlay");
+  var infoContent = document.getElementById("infoContent");
+
+  function buildInfoHtml(r){
+    var paidLabel = r.paid ? "Платено" : "Неплатено";
+    var html = '' +
+      '<div class="receipt-company">Център за гуми Импас ТТ</div>' +
+      '<div class="receipt-sub">Подробна информация за записа</div>' +
+      '<table class="receipt-table">' +
+        receiptRow("Разписка №", esc(r.id)) +
+        receiptRow("Клиент", esc(r.firstName+" "+r.lastName)) +
+        receiptRow("Телефон", esc(r.phone)) +
+        receiptRow("Номер на кола", esc(r.plate)) +
+        receiptRow("Брой гуми", esc(r.tireCount)) +
+        receiptRow("Начало на престой", formatDateBG(r.startDate)) +
+        receiptRow("Край на престой", formatDateBG(r.endDate)) +
+        receiptRow("Статус на плащане", paidLabel) +
+        receiptRow("Създаден на", formatDateTimeBG(r.createdAt));
+    if (r.notes){
+      html += receiptRow("Забележка", esc(r.notes));
+    }
+    html += receiptRow("Дата и час на прибиране", r.collectedAt ? formatDateTimeBG(r.collectedAt) : "—");
+    html += '</table>';
+    return html;
+  }
+
+  function openInfo(record){
+    infoContent.innerHTML = buildInfoHtml(record);
+    infoOverlay.classList.add("visible");
+  }
+  function closeInfo(){
+    infoOverlay.classList.remove("visible");
+  }
+  document.getElementById("infoCloseBtn").addEventListener("click", closeInfo);
+
   // ---------- history ----------
   function renderHistory(){
     var all = loadTires().filter(function(r){ return r.status === "done"; });
@@ -702,8 +757,9 @@
         '<td>'+esc(r.endDate)+'</td>' +
         '<td>'+badge+'</td>' +
         '<td class="actions">' +
+          '<button class="btn small secondary" data-action="info" data-id="'+r.id+'">ℹ️ Инфо</button>' +
           '<button class="btn small secondary" data-action="restore" data-id="'+r.id+'">Върни активен</button>' +
-          '<button class="btn small secondary" data-action="print" data-id="'+r.id+'">Печат</button>' +
+          '<button class="btn small secondary" data-action="print" data-id="'+r.id+'">🖶 Печат</button>' +
           '<button class="btn small danger" data-action="delete" data-id="'+r.id+'">Изтрий</button>' +
         '</td>' +
       '</tr>';
