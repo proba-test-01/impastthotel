@@ -246,6 +246,9 @@
 
   <!-- HISTORY -->
   <section id="view-history" class="view">
+    <div class="search-row">
+      <input type="text" id="historySearchInput" placeholder="Търсене по телефон, номер на кола, име или фамилия...">
+    </div>
     <div class="card">
       <h2>История (прибрани гуми)</h2>
       <div class="table-wrap">
@@ -294,7 +297,7 @@
 <div class="receipt-overlay" id="receiptOverlay">
   <div class="receipt-box">
     <div class="receipt-controls no-print">
-      <button class="btn" id="receiptPrintBtn">🖶 Печат</button>
+      <button class="btn" id="receiptPrintBtn">Печат</button>
       <button class="btn danger" id="receiptCloseBtn">✕ Затвори</button>
     </div>
     <div class="receipt-paper" id="receiptContent"></div>
@@ -501,7 +504,7 @@
         '<td class="actions">' +
           '<button class="btn small secondary" data-action="togglePaid" data-id="'+r.id+'">'+toggleLabel+'</button>' +
           '<button class="btn small secondary" data-action="edit" data-id="'+r.id+'">Редакция</button>' +
-          '<button class="btn small secondary" data-action="print" data-id="'+r.id+'">🖶 Печат</button>' +
+          '<button class="btn small secondary" data-action="print" data-id="'+r.id+'">Печат</button>' +
           '<button class="btn small" data-action="collect" data-id="'+r.id+'">Прибрани</button>' +
           '<button class="btn small danger" data-action="delete" data-id="'+r.id+'">Изтрий</button>' +
         '</td>' +
@@ -744,9 +747,17 @@
   document.getElementById("infoCloseBtn").addEventListener("click", closeInfo);
 
   // ---------- history ----------
+  var currentHistorySearch = "";
+
+  document.getElementById("historySearchInput").addEventListener("input", function(e){
+    currentHistorySearch = e.target.value.trim();
+    renderHistory();
+  });
+
   function renderHistory(){
     var all = loadTires().filter(function(r){ return r.status === "done"; });
     all.sort(function(a,b){ return cmpDates(b.endDate, a.endDate); });
+    all = all.filter(function(r){ return matchesSearch(r, currentHistorySearch); });
     var rowsHtml = all.map(function(r){
       var badge = r.paid ? '<span class="badge paid">Платено</span>' : '<span class="badge unpaid">Неплатено</span>';
       return '<tr>' +
@@ -757,9 +768,9 @@
         '<td>'+esc(r.endDate)+'</td>' +
         '<td>'+badge+'</td>' +
         '<td class="actions">' +
-          '<button class="btn small secondary" data-action="info" data-id="'+r.id+'">ℹ️ Инфо</button>' +
+          '<button class="btn small secondary" data-action="info" data-id="'+r.id+'">Инфо</button>' +
           '<button class="btn small secondary" data-action="restore" data-id="'+r.id+'">Върни активен</button>' +
-          '<button class="btn small secondary" data-action="print" data-id="'+r.id+'">🖶 Печат</button>' +
+          '<button class="btn small secondary" data-action="print" data-id="'+r.id+'">Печат</button>' +
           '<button class="btn small danger" data-action="delete" data-id="'+r.id+'">Изтрий</button>' +
         '</td>' +
       '</tr>';
